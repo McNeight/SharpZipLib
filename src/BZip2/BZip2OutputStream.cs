@@ -99,23 +99,66 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		/// Valid block sizes are in the range 1..9, with 1 giving 
 		/// the lowest compression and 9 the highest.
 		/// </remarks>
-		public BZip2OutputStream(Stream stream, int blockSize)
+		public BZip2OutputStream(Stream stream, int blockSize) : this(blockSize)
 		{
-			BsSetStream(stream);
-			
-			workFactor = 50;
-			if (blockSize > 9) {
-				blockSize = 9;
-			}
-			
-			if (blockSize < 1) {
-				blockSize = 1;
-			}
-			blockSize100k = blockSize;
-			AllocateCompressStructures();
-			Initialize();
-			InitBlock();
+            InitializeStream(stream);
 		}
+
+        public BZip2OutputStream(int blockSize)
+	    {
+            for (int i = 0; i < BZip2Constants.GroupCount; ++i)
+                _len[i] = new char[BZip2Constants.MaximumAlphaSize];
+
+            for (int i = 0; i < BZip2Constants.GroupCount; ++i)
+                _rfreq[i] = new int[BZip2Constants.MaximumAlphaSize];
+
+            for (int i = 0; i < BZip2Constants.GroupCount; ++i)
+                code[i] = new int[BZip2Constants.MaximumAlphaSize];
+
+            if (blockSize > 9)
+                blockSize = 9;
+
+            if (blockSize < 1)
+                blockSize = 1;
+            blockSize100k = blockSize;
+            AllocateCompressStructures();
+	    }
+
+	    public BZip2OutputStream() : this(9)
+	    {
+	        
+	    }
+
+        void AllocateCompressStructures()
+        {
+            int n = BZip2Constants.BaseBlockSize * blockSize100k;
+            block = new byte[(n + 1 + BZip2Constants.OvershootBytes)];
+            quadrant = new int[(n + BZip2Constants.OvershootBytes)];
+            zptr = new int[n];
+            ftab = new int[65537];
+
+            if (block == null || quadrant == null || zptr == null || ftab == null)
+            {
+                //		int totalDraw = (n + 1 + NUM_OVERSHOOT_BYTES) + (n + NUM_OVERSHOOT_BYTES) + n + 65537;
+                //		compressOutOfMemory ( totalDraw, n );
+            }
+
+            /*
+            The back end needs a place to store the MTF values
+            whilst it calculates the coding tables.  We could
+            put them in the zptr array.  However, these values
+            will fit in a short, so we overlay szptr at the
+            start of zptr, in the hope of reducing the number
+            of cache misses induced by the multiple traversals
+            of the MTF values when calculating coding tables.
+            Seems to improve compression speed by about 1%.
+            */
+            //	szptr = zptr;
+
+
+            szptr = new short[2 * n];
+        }
+
 		#endregion
 		
 		#region Destructor
@@ -138,9 +181,42 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			get { return isStreamOwner; }
 			set { isStreamOwner = value; }
 		}
-		
 
-		#region Stream overrides
+	    public void InitializeStream(Stream stream)
+	    {
+            ClearInstanceVariables();
+            BsSetStream(stream);
+            Initialize();
+            InitBlock();
+	    }
+
+	    private void ClearInstanceVariables()
+	    {
+	        isStreamOwner = false;
+	        last = 0;
+	        origPtr = 0;
+	        blockRandomised = false;
+	        bytesOut = 0;
+	        bsBuff = 0;
+	        bsLive = 0;
+            mCrc.Reset();
+	        nInUse = 0;
+	        nMTF = 0;
+	        workFactor = 50;
+	        workDone = 0;
+	        workLimit = 0;
+	        firstAttempt = false;
+	        nBlocksRandomised = 0;
+	        currentChar = -1;
+	        runLength = 0;
+	        blockCRC = 0;
+	        combinedCRC = 0;
+	        allowableBlockSize = 0;
+	        baseStream = null;
+	        disposed_ = false;
+	    }
+
+	    #region Stream overrides
 		/// <summary>
 		/// Gets a value indicating whether the current stream supports reading
 		/// </summary>
@@ -574,11 +650,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		
 		void SendMTFValues()
 		{
-			char[][] len = new char[BZip2Constants.GroupCount][];
-			for (int i = 0; i < BZip2Constants.GroupCount; ++i) {
-				len[i] = new char[BZip2Constants.MaximumAlphaSize];
-			}
-			
 			int gs, ge, totc, bt, bc, iter;
 			int nSelectors = 0, alphaSize, minLen, maxLen, selCtr;
 			int nGroups;
@@ -586,7 +657,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			alphaSize = nInUse + 2;
 			for (int t = 0; t < BZip2Constants.GroupCount; t++) {
 				for (int v = 0; v < alphaSize; v++) {
-					len[t][v] = (char)GREATER_ICOST;
+					_len[t][v] = (char)GREATER_ICOST;
 				}
 			}
 			
@@ -627,9 +698,9 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				
 				for (int v = 0; v < alphaSize; v++) {
 					if (v >= gs && v <= ge) {
-						len[nPart - 1][v] = (char)LESSER_ICOST;
+						_len[nPart - 1][v] = (char)LESSER_ICOST;
 					} else {
-						len[nPart - 1][v] = (char)GREATER_ICOST;
+						_len[nPart - 1][v] = (char)GREATER_ICOST;
 					}
 				}
 				
@@ -638,13 +709,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				remF -= aFreq;
 			}
 			
-			int[][] rfreq = new int[BZip2Constants.GroupCount][];
-			for (int i = 0; i < BZip2Constants.GroupCount; ++i) {
-				rfreq[i] = new int[BZip2Constants.MaximumAlphaSize];
-			}
-			
-			int[] fave = new int[BZip2Constants.GroupCount];
-			short[] cost = new short[BZip2Constants.GroupCount];
 			/*---
 			Iterate up to N_ITERS times to improve the tables.
 			---*/
@@ -655,7 +719,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				
 				for (int t = 0; t < nGroups; ++t) {
 					for (int v = 0; v < alphaSize; ++v) {
-						rfreq[t][v] = 0;
+						_rfreq[t][v] = 0;
 					}
 				}
 				
@@ -685,12 +749,12 @@ namespace ICSharpCode.SharpZipLib.BZip2
 						cost0 = cost1 = cost2 = cost3 = cost4 = cost5 = 0;
 						for (int i = gs; i <= ge; ++i) {
 							short icv = szptr[i];
-							cost0 += (short)len[0][icv];
-							cost1 += (short)len[1][icv];
-							cost2 += (short)len[2][icv];
-							cost3 += (short)len[3][icv];
-							cost4 += (short)len[4][icv];
-							cost5 += (short)len[5][icv];
+							cost0 += (short)_len[0][icv];
+							cost1 += (short)_len[1][icv];
+							cost2 += (short)_len[2][icv];
+							cost3 += (short)_len[3][icv];
+							cost4 += (short)_len[4][icv];
+							cost5 += (short)_len[5][icv];
 						}
 						cost[0] = cost0;
 						cost[1] = cost1;
@@ -702,7 +766,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 						for (int i = gs; i <= ge; ++i) {
 							short icv = szptr[i];
 							for (int t = 0; t < nGroups; t++) {
-								cost[t] += (short)len[t][icv];
+								cost[t] += (short)_len[t][icv];
 							}
 						}
 					}
@@ -728,7 +792,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 					Increment the symbol frequencies for the selected table.
 					--*/
 					for (int i = gs; i <= ge; ++i) {
-						++rfreq[bt][szptr[i]];
+						++_rfreq[bt][szptr[i]];
 					}
 					
 					gs = ge+1;
@@ -738,13 +802,13 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				Recompute the tables based on the accumulated frequencies.
 				--*/
 				for (int t = 0; t < nGroups; ++t) {
-					HbMakeCodeLengths(len[t], rfreq[t], alphaSize, 20);
+					HbMakeCodeLengths(_len[t], _rfreq[t], alphaSize, 20);
 				}
 			}
 			
-			rfreq = null;
-			fave = null;
-			cost = null;
+            //_rfreq = null;
+            //fave = null;
+            //cost = null;
 			
 			if (!(nGroups < 8)) {
 				Panic();
@@ -755,7 +819,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			}
 			
 			/*--- Compute MTF values for the selectors. ---*/
-			char[] pos = new char[BZip2Constants.GroupCount];
 			char ll_i, tmp2, tmp;
 			
 			for (int i = 0; i < nGroups; i++) {
@@ -775,23 +838,17 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				pos[0] = tmp;
 				selectorMtf[i] = (char)j;
 			}
-			
-			int[][] code = new int[BZip2Constants.GroupCount][];
-			
-			for (int i = 0; i < BZip2Constants.GroupCount; ++i) {
-				code[i] = new int[BZip2Constants.MaximumAlphaSize];
-			}
-			
-			/*--- Assign actual codes for the tables. --*/
+
+            /*--- Assign actual codes for the tables. --*/
 			for (int t = 0; t < nGroups; t++) {
 				minLen = 32;
 				maxLen = 0;
 				for (int i = 0; i < alphaSize; i++) {
-					if (len[t][i] > maxLen) {
-						maxLen = len[t][i];
+					if (_len[t][i] > maxLen) {
+						maxLen = _len[t][i];
 					}
-					if (len[t][i] < minLen) {
-						minLen = len[t][i];
+					if (_len[t][i] < minLen) {
+						minLen = _len[t][i];
 					}
 				}
 				if (maxLen > 20) {
@@ -800,11 +857,10 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				if (minLen < 1) {
 					Panic();
 				}
-				HbAssignCodes(code[t], len[t], minLen, maxLen, alphaSize);
+				HbAssignCodes(code[t], _len[t], minLen, maxLen, alphaSize);
 			}
 			
 			/*--- Transmit the mapping table. ---*/
-			bool[] inUse16 = new bool[16];
 			for (int i = 0; i < 16; ++i) {
 				inUse16[i] = false;
 				for (int j = 0; j < 16; ++j) {
@@ -846,14 +902,14 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			
 			/*--- Now the coding tables. ---*/
 			for (int t = 0; t < nGroups; ++t) {
-				int curr = len[t][0];
+				int curr = _len[t][0];
 				BsW(5, curr);
 				for (int i = 0; i < alphaSize; ++i) {
-					while (curr < len[t][i]) {
+					while (curr < _len[t][i]) {
 						BsW(2, 2);
 						curr++; /* 10 */
 					}
-					while (curr > len[t][i]) {
+					while (curr > _len[t][i]) {
 						BsW(2, 3);
 						curr--; /* 11 */
 					}
@@ -874,7 +930,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				}
 				
 				for (int i = gs; i <= ge; i++) {
-					BsW(len[selector[selCtr]][szptr[i]], code[selector[selCtr]][szptr[i]]);
+					BsW(_len[selector[selCtr]][szptr[i]], code[selector[selCtr]][szptr[i]]);
 				}
 				
 				gs = ge + 1;
@@ -984,13 +1040,11 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			int unLo, unHi, ltLo, gtHi, med, n, m;
 			int lo, hi, d;
 			
-			StackElement[] stack = new StackElement[QSORT_STACK_SIZE];
-
 			int sp = 0;
 			
-			stack[sp].ll = loSt;
-			stack[sp].hh = hiSt;
-			stack[sp].dd = dSt;
+			_stack[sp].ll = loSt;
+			_stack[sp].hh = hiSt;
+			_stack[sp].dd = dSt;
 			sp++;
 			
 			while (sp > 0) {
@@ -999,9 +1053,9 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				}
 				
 				sp--;
-				lo = stack[sp].ll;
-				hi = stack[sp].hh;
-				d = stack[sp].dd;
+				lo = _stack[sp].ll;
+				hi = _stack[sp].hh;
+				d = _stack[sp].dd;
 				
 				if (hi - lo < SMALL_THRESH || d > DEPTH_THRESH) {
 					SimpleSort(lo, hi, d);
@@ -1071,9 +1125,9 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				}
 				
 				if (gtHi < ltLo) {
-					stack[sp].ll = lo;
-					stack[sp].hh = hi;
-					stack[sp].dd = d+1;
+					_stack[sp].ll = lo;
+					_stack[sp].hh = hi;
+					_stack[sp].dd = d+1;
 					sp++;
 					continue;
 				}
@@ -1086,19 +1140,19 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				n = lo + unLo - ltLo - 1;
 				m = hi - (gtHi - unHi) + 1;
 				
-				stack[sp].ll = lo;
-				stack[sp].hh = n;
-				stack[sp].dd = d;
+				_stack[sp].ll = lo;
+				_stack[sp].hh = n;
+				_stack[sp].dd = d;
 				sp++;
 				
-				stack[sp].ll = n + 1;
-				stack[sp].hh = m - 1;
-				stack[sp].dd = d+1;
+				_stack[sp].ll = n + 1;
+				_stack[sp].hh = m - 1;
+				_stack[sp].dd = d+1;
 				sp++;
 				
-				stack[sp].ll = m;
-				stack[sp].hh = hi;
-				stack[sp].dd = d;
+				_stack[sp].ll = m;
+				_stack[sp].hh = hi;
+				_stack[sp].dd = d;
 				sp++;
 			}
 		}
@@ -1106,9 +1160,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		void MainSort() 
 		{
 			int i, j, ss, sb;
-			int[] runningOrder = new int[256];
-			int[] copy = new int[256];
-			bool[] bigDone = new bool[256];
 			int c1, c2;
 			int numQSorted;
 			
@@ -1473,38 +1524,8 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			return false;
 		}
 		
-		void AllocateCompressStructures() 
-		{
-			int n = BZip2Constants.BaseBlockSize * blockSize100k;
-			block = new byte[(n + 1 + BZip2Constants.OvershootBytes)];
-			quadrant = new int[(n + BZip2Constants.OvershootBytes)];
-			zptr = new int[n];
-			ftab = new int[65537];
-			
-			if (block == null || quadrant == null || zptr == null  || ftab == null) {
-				//		int totalDraw = (n + 1 + NUM_OVERSHOOT_BYTES) + (n + NUM_OVERSHOOT_BYTES) + n + 65537;
-				//		compressOutOfMemory ( totalDraw, n );
-			}
-			
-			/*
-			The back end needs a place to store the MTF values
-			whilst it calculates the coding tables.  We could
-			put them in the zptr array.  However, these values
-			will fit in a short, so we overlay szptr at the
-			start of zptr, in the hope of reducing the number
-			of cache misses induced by the multiple traversals
-			of the MTF values when calculating coding tables.
-			Seems to improve compression speed by about 1%.
-			*/
-			//	szptr = zptr;
-			
-			
-			szptr = new short[2 * n];
-		}
-		
 		void GenerateMTFValues() 
 		{
-			char[] yy = new char[256];
 			int  i, j;
 			char tmp;
 			char tmp2;
@@ -1606,7 +1627,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			throw new BZip2Exception("BZip2 output stream panic");
 		}
 		
-		static void HbMakeCodeLengths(char[] len, int[] freq, int alphaSize, int maxLen) 
+		void HbMakeCodeLengths(char[] len, int[] freq, int alphaSize, int maxLen) 
 		{
 			/*--
 			Nodes and heap entries run from 1.  Entry 0
@@ -1614,10 +1635,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			--*/
 			int nNodes, nHeap, n1, n2, j, k;
 			bool  tooLong;
-			
-			int[] heap   = new int[BZip2Constants.MaximumAlphaSize + 2];
-			int[] weight = new int[BZip2Constants.MaximumAlphaSize * 2];
-			int[] parent = new int[BZip2Constants.MaximumAlphaSize * 2];
 			
 			for (int i = 0; i < alphaSize; ++i) 
 			{
@@ -1835,6 +1852,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		IChecksum mCrc = new StrangeCRC();
 		
 		bool[] inUse = new bool[256];
+        bool[] inUse16 = new bool[16];
 		int nInUse;
 		
 		char[] seqToUnseq = new char[256];
@@ -1858,7 +1876,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		* happen, we stop sorting, randomise the block
 		* slightly, and try again.
 		*/
-		int workFactor;
+		int workFactor = 50;
 		int workDone;
 		int workLimit;
 		bool firstAttempt;
@@ -1870,7 +1888,22 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		int allowableBlockSize;
 		Stream baseStream;
 		bool disposed_;
-		#endregion
+	    private StackElement[] _stack = new StackElement[QSORT_STACK_SIZE];
+        private char[][] _len = new char[BZip2Constants.GroupCount][];
+        private int[][] _rfreq = new int[BZip2Constants.GroupCount][];
+        int[] fave = new int[BZip2Constants.GroupCount];
+        short[] cost = new short[BZip2Constants.GroupCount];
+        char[] pos = new char[BZip2Constants.GroupCount];
+        int[][] code = new int[BZip2Constants.GroupCount][];
+        int[] runningOrder = new int[256];
+        int[] copy = new int[256];
+        bool[] bigDone = new bool[256];
+        char[] yy = new char[256];
+
+        int[] heap = new int[BZip2Constants.MaximumAlphaSize + 2];
+        int[] weight = new int[BZip2Constants.MaximumAlphaSize * 2];
+        int[] parent = new int[BZip2Constants.MaximumAlphaSize * 2];
+	    #endregion
 	}
 }
 

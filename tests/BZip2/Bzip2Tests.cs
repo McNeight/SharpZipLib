@@ -55,6 +55,51 @@ namespace ICSharpCode.SharpZipLib.Tests.BZip2
 				}
 			}
 		}
+
+		/// <summary>
+		/// Basic compress/decompress test BZip2
+		/// </summary>
+		[Test]
+		[Category("BZip2")]
+		public void BasicReuseStreams()
+		{
+            BZip2InputStream inStream = new BZip2InputStream();
+            BZip2OutputStream outStream = new BZip2OutputStream();
+		    for (int ix = 0; ix < 25; ix++)
+		    {
+		        MemoryStream ms = new MemoryStream();
+                outStream.InitializeStream(ms);
+
+		        byte[] buf = new byte[10000];
+		        System.Random rnd = new Random();
+		        rnd.NextBytes(buf);
+
+		        outStream.Write(buf, 0, buf.Length);
+		        outStream.Close();
+		        ms = new MemoryStream(ms.GetBuffer());
+		        ms.Seek(0, SeekOrigin.Begin);
+
+                inStream.InitializeStream(ms);
+		        {
+		            byte[] buf2 = new byte[buf.Length];
+		            int pos = 0;
+		            while (true)
+		            {
+		                int numRead = inStream.Read(buf2, pos, 4096);
+		                if (numRead <= 0)
+		                {
+		                    break;
+		                }
+		                pos += numRead;
+		            }
+
+		            for (int i = 0; i < buf.Length; ++i)
+		            {
+		                Assert.AreEqual(buf2[i], buf[i]);
+		            }
+		        }
+		    }
+		}
 		
 		/// <summary>
 		/// Check that creating an empty archive is handled ok

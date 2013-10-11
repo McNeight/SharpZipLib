@@ -60,21 +60,26 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		/// Construct instance for reading from stream
 		/// </summary>
 		/// <param name="stream">Data source</param>
-		public BZip2InputStream(Stream stream) 
+		public BZip2InputStream(Stream stream) : this()
 		{
-			// init arrays
-			for (int i = 0; i < BZip2Constants.GroupCount; ++i) 
-			{
-				limit[i] = new int[BZip2Constants.MaximumAlphaSize];
-				baseArray[i]  = new int[BZip2Constants.MaximumAlphaSize];
-				perm[i]  = new int[BZip2Constants.MaximumAlphaSize];
-			}
-			
-			BsSetStream(stream);
-			Initialize();
-			InitBlock();
-			SetupBlock();
+			InitializeStream(stream);
 		}
+
+	    public BZip2InputStream()
+	    {
+            // init arrays
+            for (int i = 0; i < BZip2Constants.GroupCount; ++i)
+            {
+                limit[i] = new int[BZip2Constants.MaximumAlphaSize];
+                baseArray[i] = new int[BZip2Constants.MaximumAlphaSize];
+                perm[i] = new int[BZip2Constants.MaximumAlphaSize];
+            }
+
+            for (int i = 0; i < BZip2Constants.GroupCount; ++i)
+            {
+                _len[i] = new char[BZip2Constants.MaximumAlphaSize];
+            }
+	    }
 		
 		#endregion
 
@@ -87,9 +92,55 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			get { return isStreamOwner; }
 			set { isStreamOwner = value; }
 		}
-		
 
-		#region Stream Overrides
+	    public void InitializeStream(Stream stream)
+	    {
+	        ClearInstanceVariables();
+
+            BsSetStream(stream);
+            Initialize();
+            InitBlock();
+            SetupBlock();
+	    }
+
+	    private void ClearInstanceVariables()
+	    {
+	        last = 0;
+	        origPtr = 0;
+	        blockSize100k = 0;
+	        blockRandomised = false;
+	        bsBuff = 0;
+	        bsLive = 0;
+	        mCrc.Reset();
+	        nInUse = 0;
+	        baseStream = null;
+	        streamEnd = false;
+	        currentChar = -1;
+	        currentState = START_BLOCK_STATE;
+	        storedBlockCRC = 0;
+	        storedCombinedCRC = 0;
+	        computedBlockCRC = 0;
+	        computedCombinedCRC = 0;
+	        count = 0;
+	        chPrev = 0;
+	        ch2 = 0;
+	        tPos = 0;
+	        rNToGo = 0;
+	        rTPos = 0;
+	        i2 = 0;
+	        j2 = 0;
+	        z = 0;
+	        isStreamOwner = true;
+
+            //Array.Clear(inUse, 0, inUse.Length);
+            //Array.Clear(seqToUnseq, 0, seqToUnseq.Length);
+            //Array.Clear(unseqToSeq, 0, unseqToSeq.Length);
+            //Array.Clear(selector, 0, selector.Length);
+            //Array.Clear(selectorMtf, 0, selectorMtf.Length);
+            //Array.Clear(selectorMtf, 0, selectorMtf.Length);
+	    }
+
+	    #region Stream Overrides
 		/// <summary>
 		/// Gets a value indicating if the stream supports reading
 		/// </summary>
@@ -105,7 +156,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		/// </summary>
 		public override bool CanSeek {
 			get {
-				return baseStream.CanSeek;
+				return false;
 			}
 		}
 		
@@ -413,13 +464,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		
 		void RecvDecodingTables() 
 		{
-			char[][] len = new char[BZip2Constants.GroupCount][];
-			for (int i = 0; i < BZip2Constants.GroupCount; ++i) {
-				len[i] = new char[BZip2Constants.MaximumAlphaSize];
-			}
-			
-			bool[] inUse16 = new bool[16];
-			
 			//--- Receive the mapping table ---
 			for (int i = 0; i < 16; i++) {
 				inUse16[i] = (BsR(1) == 1);
@@ -453,19 +497,18 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			}
 			
 			//--- Undo the MTF values for the selectors. ---
-			byte[] pos = new byte[BZip2Constants.GroupCount];
 			for (int v = 0; v < nGroups; v++) {
-				pos[v] = (byte)v;
+				_pos[v] = (byte)v;
 			}
 			
 			for (int i = 0; i < nSelectors; i++) {
 				int  v   = selectorMtf[i];
-				byte tmp = pos[v];
+				byte tmp = _pos[v];
 				while (v > 0) {
-					pos[v] = pos[v - 1];
+					_pos[v] = _pos[v - 1];
 					v--;
 				}
-				pos[0]      = tmp;
+				_pos[0]      = tmp;
 				selector[i] = tmp;
 			}
 			
@@ -480,7 +523,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 							curr--;
 						}
 					}
-					len[t][i] = (char)curr;
+					_len[t][i] = (char)curr;
 				}
 			}
 			
@@ -489,17 +532,16 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				int minLen = 32;
 				int maxLen = 0;
 				for (int i = 0; i < alphaSize; i++) {
-					maxLen = Math.Max(maxLen, len[t][i]);
-					minLen = Math.Min(minLen, len[t][i]);
+					maxLen = Math.Max(maxLen, _len[t][i]);
+					minLen = Math.Min(minLen, _len[t][i]);
 				}
-				HbCreateDecodeTables(limit[t], baseArray[t], perm[t], len[t], minLen, maxLen, alphaSize);
+				HbCreateDecodeTables(limit[t], baseArray[t], perm[t], _len[t], minLen, maxLen, alphaSize);
 				minLens[t] = minLen;
 			}
 		}
 		
 		void GetAndMoveToFrontDecode() 
 		{
-			byte[] yy = new byte[256];
 			int nextSym;
 			
 			int limitLast = BZip2Constants.BaseBlockSize * blockSize100k;
@@ -649,8 +691,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		
 		void SetupBlock() 
 		{
-			int[] cftab = new int[257];
-			
 			cftab[0] = 0;
 			Array.Copy(unzftab, 0, cftab, 1, 256);
 			
@@ -664,7 +704,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 				cftab[ch]++;
 			}
 			
-			cftab = null;
+			//cftab = null;
 			
 			tPos = tt[origPtr];
 			
@@ -816,10 +856,6 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			if (newSize100k == 0) {
 				return;
 			}
-			
-			int n = BZip2Constants.BaseBlockSize * newSize100k;
-			ll8 = new byte[n];
-			tt  = new int[n];
 		}
 
 		static void CompressedStreamEOF() 
@@ -899,6 +935,8 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		the block size == last + 1.
 		--*/
 		int last;
+
+        byte[] yy = new byte[256];
 		
 		/*--
 		index in zptr[] of original string after sorting.
@@ -918,6 +956,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		IChecksum mCrc = new StrangeCRC();
 		
 		bool[] inUse = new bool[256];
+        bool[] inUse16 = new bool[16];
 		int    nInUse;
 		
 		byte[] seqToUnseq = new byte[256];
@@ -926,8 +965,8 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		byte[] selector    = new byte[BZip2Constants.MaximumSelectors];
 		byte[] selectorMtf = new byte[BZip2Constants.MaximumSelectors];
 		
-		int[] tt;
-		byte[] ll8;
+		int[] tt = new int[BZip2Constants.BaseBlockSize * 9];
+		byte[] ll8 = new byte[BZip2Constants.BaseBlockSize * 9];
 		
 		/*--
 		freq table collected to save a pass over the data
@@ -958,7 +997,11 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		int i2, j2;
 		byte z;
 		bool isStreamOwner = true;
-		#endregion
+	    private char[][] _len = new char[BZip2Constants.GroupCount][];
+        private byte[] _pos = new byte[BZip2Constants.GroupCount];
+        int[] cftab = new int[257];
+
+	    #endregion
 	}
 }
 /* This file was derived from a file containing this license:
