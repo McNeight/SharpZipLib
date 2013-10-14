@@ -478,7 +478,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 			}
 			finally {
 				if ( disposing ) {
-					if ( IsStreamOwner ) {
+					if ( IsStreamOwner && baseStream != null ) {
 						baseStream.Close();
 					}
 				}
@@ -490,7 +490,8 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		/// </summary>		
 		public override void Flush()
 		{
-			baseStream.Flush();
+            if(baseStream != null)
+			    baseStream.Flush();
 		}
 				
 		void Initialize()
@@ -607,6 +608,8 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		
 		void BsFinishedWithStream()
 		{
+            if(baseStream == null)
+                return;
 			while (bsLive > 0) 
 			{
 				int ch = (bsBuff >> 24);
@@ -619,6 +622,8 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		
 		void BsW(int n, int v)
 		{
+		    if (baseStream == null)
+		        return;
 			while (bsLive >= 8) {
 				int ch = (bsBuff >> 24);
 				unchecked{baseStream.WriteByte((byte)ch);} // write 8-bit
