@@ -129,11 +129,10 @@ namespace ICSharpCode.SharpZipLib.Encryption {
 					if (byteCount > AUTH_CODE_LENGTH) {
 						// At least one byte of data plus auth code
 						int finalBlock = byteCount - AUTH_CODE_LENGTH;
-						_transform.TransformBlock(_slideBuffer,
-												  _slideBufStartPos,
-												  finalBlock,
-												  outBuffer,
-												  offset);
+						byte[] fb = _transform.TransformFinalBlock(_slideBuffer,
+															  _slideBufStartPos,
+															  finalBlock);
+						Array.Copy(fb, 0, outBuffer, offset, fb.Length);
 
 						nBytes += finalBlock;
 						_slideBufStartPos += finalBlock;

@@ -162,11 +162,20 @@ namespace ICSharpCode.SharpZipLib.Encryption {
 		#region ICryptoTransform Members
 
 		/// <summary>
-		/// Not implemented.
+		/// Implement the ICryptoTransform method.
 		/// </summary>
 		public byte[] TransformFinalBlock(byte[] inputBuffer, int inputOffset, int inputCount) {
-
-			throw new NotImplementedException("ZipAESTransform.TransformFinalBlock");
+			byte[] result;
+			if (!_finalised)
+			{
+				result = new byte[inputCount];
+				TransformBlock(inputBuffer, inputOffset, inputCount, result, 0);
+			}
+			else
+			{
+				result = new byte[0];
+			}
+			return result;
 		}
 
 		/// <summary>
