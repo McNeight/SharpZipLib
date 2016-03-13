@@ -67,7 +67,7 @@ namespace ICSharpCode.SharpZipLib.GZip
 		public const int FTEXT    = 0x1;
 		
 		/// <summary>
-		/// Flag bitmask for Crc
+		/// Flag bitmask for CRC
 		/// </summary>
 		public const int FHCRC    = 0x2;
 		

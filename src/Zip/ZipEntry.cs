@@ -362,7 +362,7 @@ namespace ICSharpCode.SharpZipLib.Zip
 		///     1        0       Fast compression was used<br/>
 		///     1        1       Super fast compression was used<br/>
 		/// <br/>
-		/// Bit 3: If set, the fields crc-32, compressed size
+		/// Bit 3: If set, the fields CRC-32, compressed size
 		/// and uncompressed size are were not able to be written during zip file creation
 		/// The correct values are held in a data descriptor immediately following the compressed data. <br/>
 		/// Bit 4: Reserved for use by PKZIP for enhanced deflating<br/>
@@ -786,13 +786,13 @@ namespace ICSharpCode.SharpZipLib.Zip
 		}
 
 		/// <summary>
-		/// Gets/Sets the crc of the uncompressed data.
+		/// Gets/Sets the CRC of the uncompressed data.
 		/// </summary>
 		/// <exception cref="System.ArgumentOutOfRangeException">
-		/// Crc is not in the range 0..0xffffffffL
+		/// CRC is not in the range 0..0xffffffffL
 		/// </exception>
 		/// <returns>
-		/// The crc value or -1 if unknown.
+		/// The CRC value or -1 if unknown.
 		/// </returns>
 		public long Crc 
 		{

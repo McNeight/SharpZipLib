@@ -393,7 +393,7 @@ namespace ICSharpCode.SharpZipLib.Zip
 		/// Signature for data descriptor
 		/// </summary>
 		/// <remarks>
-		/// This is only used where the length, Crc, or compressed size isnt known when the
+		/// This is only used where the length, CRC, or compressed size isnt known when the
 		/// entry is created and the output stream doesnt support seeking.
 		/// The local entry cannot be 'patched' with the correct values in this case
 		/// so the values are recorded after the data prefixed by this header, as well as in the central directory.
@@ -404,7 +404,7 @@ namespace ICSharpCode.SharpZipLib.Zip
 		/// Signature for data descriptor
 		/// </summary>
 		/// <remarks>
-		/// This is only used where the length, Crc, or compressed size isnt known when the
+		/// This is only used where the length, CRC, or compressed size isnt known when the
 		/// entry is created and the output stream doesnt support seeking.
 		/// The local entry cannot be 'patched' with the correct values in this case
 		/// so the values are recorded after the data prefixed by this header, as well as in the central directory.

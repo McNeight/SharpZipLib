@@ -1832,7 +1832,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		int bytesOut;
 		int bsBuff;
 		int bsLive;
-		IChecksum mCrc = new StrangeCRC();
+		IChecksum mCrc = new StrangeCrc();
 		
 		bool[] inUse = new bool[256];
 		int nInUse;

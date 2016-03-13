@@ -552,7 +552,7 @@ namespace ICSharpCode.SharpZipLib.Tests.Zip
 
 			// Check values against originals
 			Assert.AreEqual(testName, clone.Name, "Cloned name mismatch");
-			Assert.AreEqual(testCrc, clone.Crc, "Cloned crc mismatch");
+			Assert.AreEqual(testCrc, clone.Crc, "Cloned CRC mismatch");
 			Assert.AreEqual(testComment, clone.Comment, "Cloned comment mismatch");
 			Assert.AreEqual(testExtraData, clone.ExtraData, "Cloned Extra data mismatch");
 			Assert.AreEqual(testSize, clone.Size, "Cloned size mismatch");
@@ -2068,7 +2068,7 @@ namespace ICSharpCode.SharpZipLib.Tests.Zip
 		/// <summary>
 		/// Regression test for problem where the password check would fail for an archive whose
 		/// date was updated from the extra data.
-		/// This applies to archives where the crc wasnt know at the time of encryption.
+		/// This applies to archives where the CRC wasnt know at the time of encryption.
 		/// The date of the entry is used in its place.
 		/// </summary>
 		[Test]
