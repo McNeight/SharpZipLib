@@ -398,12 +398,12 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 
 			using (TarOutputStream tarOut = new TarOutputStream(ms))
 			{
-				entry = TarEntry.CreateTarEntry("TestEntry");
+				entry = TarEntry.CreateTarEntry("NUnitTestEntry");
 				entry.GroupId = 12;
 				entry.UserId = 14;
 				entry.ModTime = modTime;
-				entry.UserName = "UserName";
-				entry.GroupName = "GroupName";
+				entry.UserName = "NUnitTestUserName";
+				entry.GroupName = "NUnitTestGroupName";
 				entry.TarHeader.Mode = 12345;
 			
 				tarOut.PutNextEntry(entry);
