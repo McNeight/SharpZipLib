@@ -1,14 +1,13 @@
 using System;
 using System.IO;
 using System.Text;
-
+using ICSharpCode.SharpZipLib.Tar;
+using ICSharpCode.SharpZipLib.Tests.TestSupport;
 using NUnit.Framework;
 
-using ICSharpCode.SharpZipLib.Tests.TestSupport;
-using ICSharpCode.SharpZipLib.Tar;
+namespace ICSharpCode.SharpZipLib.Tests.Tar
+{
 
-namespace ICSharpCode.SharpZipLib.Tests.Tar {
-	
 	/// <summary>
 	/// This class contains test cases for Tar archive handling.
 	/// </summary>
@@ -16,12 +15,12 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 	public class TarTestSuite
 	{
 		int entryCount;
-		
+
 		void EntryCounter(TarArchive archive, TarEntry entry, string message)
 		{
 			entryCount++;
 		}
-		
+
 		/// <summary>
 		/// Test that an empty archive can be created and when read has 0 entries in it
 		/// </summary>
@@ -31,20 +30,18 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 		{
 			MemoryStream ms = new MemoryStream();
 			int recordSize = 0;
-			using ( TarArchive tarOut = TarArchive.CreateOutputTarArchive(ms) )
-			{
+			using (TarArchive tarOut = TarArchive.CreateOutputTarArchive(ms)) {
 				recordSize = tarOut.RecordSize;
 			}
-			
+
 			Assert.IsTrue(ms.GetBuffer().Length > 0, "Archive size must be > zero");
 			Assert.AreEqual(ms.GetBuffer().Length % recordSize, 0, "Archive size must be a multiple of record size");
-			
+
 			MemoryStream ms2 = new MemoryStream();
 			ms2.Write(ms.GetBuffer(), 0, ms.GetBuffer().Length);
 			ms2.Seek(0, SeekOrigin.Begin);
-			
-			using ( TarArchive tarIn = TarArchive.CreateInputTarArchive(ms2) )
-			{
+
+			using (TarArchive tarIn = TarArchive.CreateInputTarArchive(ms2)) {
 				entryCount = 0;
 				tarIn.ProgressMessageEvent += new ProgressMessageHandler(EntryCounter);
 				tarIn.ListContents();
@@ -56,19 +53,17 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 		/// Check that the tar block factor can be varied successfully.
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        public void BlockFactorHandling()
+		[Category("Tar")]
+		public void BlockFactorHandling()
 		{
 			const int MinimumBlockFactor = 1;
 			const int MaximumBlockFactor = 64;
 			const int FillFactor = 2;
 
-			for ( int factor = MinimumBlockFactor; factor < MaximumBlockFactor; ++factor)
-			{
+			for (int factor = MinimumBlockFactor; factor < MaximumBlockFactor; ++factor) {
 				MemoryStream ms = new MemoryStream();
 
-				using ( TarOutputStream tarOut = new TarOutputStream(ms, factor) )
-				{
+				using (TarOutputStream tarOut = new TarOutputStream(ms, factor)) {
 					TarEntry entry = TarEntry.CreateTarEntry("TestEntry");
 					entry.Size = (TarBuffer.BlockSize * factor * FillFactor);
 					tarOut.PutNextEntry(entry);
@@ -79,8 +74,7 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 					r.NextBytes(buffer);
 
 					// Last block is a partial one
-					for ( int i = 0; i < factor * FillFactor; ++i)
-					{
+					for (int i = 0; i < factor * FillFactor; ++i) {
 						tarOut.Write(buffer, 0, buffer.Length);
 					}
 				}
@@ -97,12 +91,10 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 				Assert.AreEqual(TarBuffer.BlockSize * totalBlocks, tarData.Length, "Tar file should contain {0} blocks in length",
 					totalBlocks);
 
-				if ( usedBlocks < totalBlocks )
-				{
+				if (usedBlocks < totalBlocks) {
 					// Start at first byte after header.
-					int byteIndex = TarBuffer.BlockSize * ((factor * FillFactor)+ 1);
-					while ( byteIndex < tarData.Length )
-					{
+					int byteIndex = TarBuffer.BlockSize * ((factor * FillFactor) + 1);
+					while (byteIndex < tarData.Length) {
 						int blockNumber = byteIndex / TarBuffer.BlockSize;
 						int offset = blockNumber % TarBuffer.BlockSize;
 						Assert.AreEqual(0, tarData[byteIndex],
@@ -114,25 +106,22 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 				}
 			}
 		}
-		
+
 		/// <summary>
 		/// Check that the tar trailer only contains nulls.
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        public void TrailerContainsNulls()
+		[Category("Tar")]
+		public void TrailerContainsNulls()
 		{
 			const int TestBlockFactor = 3;
 
-			for ( int iteration = 0; iteration < TestBlockFactor * 2; ++iteration)
-			{
+			for (int iteration = 0; iteration < TestBlockFactor * 2; ++iteration) {
 				MemoryStream ms = new MemoryStream();
 
-				using ( TarOutputStream tarOut = new TarOutputStream(ms, TestBlockFactor) )
-				{
+				using (TarOutputStream tarOut = new TarOutputStream(ms, TestBlockFactor)) {
 					TarEntry entry = TarEntry.CreateTarEntry("TestEntry");
-					if ( iteration > 0 )
-					{
+					if (iteration > 0) {
 						entry.Size = (TarBuffer.BlockSize * (iteration - 1)) + 9;
 					}
 					tarOut.PutNextEntry(entry);
@@ -142,16 +131,13 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 					Random r = new Random();
 					r.NextBytes(buffer);
 
-					if ( iteration > 0 )
-					{
-						for ( int i = 0; i < iteration - 1; ++i )
-						{
+					if (iteration > 0) {
+						for (int i = 0; i < iteration - 1; ++i) {
 							tarOut.Write(buffer, 0, buffer.Length);
 						}
 
 						// Last block is a partial one
-						for ( int i = 1; i < 10; ++i)
-						{
+						for (int i = 1; i < 10; ++i) {
 							tarOut.WriteByte((byte)i);
 						}
 					}
@@ -169,12 +155,10 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 				Assert.AreEqual(TarBuffer.BlockSize * totalBlocks, tarData.Length,
 					string.Format("Tar file should be {0} blocks in length", totalBlocks));
 
-				if ( usedBlocks < totalBlocks )
-				{
+				if (usedBlocks < totalBlocks) {
 					// Start at first byte after header.
 					int byteIndex = TarBuffer.BlockSize * (iteration + 1);
-					while ( byteIndex < tarData.Length )
-					{
+					while (byteIndex < tarData.Length) {
 						int blockNumber = byteIndex / TarBuffer.BlockSize;
 						int offset = blockNumber % TarBuffer.BlockSize;
 						Assert.AreEqual(0, tarData[byteIndex],
@@ -190,8 +174,7 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 		void TryLongName(string name)
 		{
 			MemoryStream ms = new MemoryStream();
-			using ( TarOutputStream tarOut = new TarOutputStream(ms) )
-			{
+			using (TarOutputStream tarOut = new TarOutputStream(ms)) {
 				DateTime modTime = DateTime.Now;
 
 				TarEntry entry = TarEntry.CreateTarEntry(name);
@@ -202,14 +185,13 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 			ms2.Write(ms.GetBuffer(), 0, ms.GetBuffer().Length);
 			ms2.Seek(0, SeekOrigin.Begin);
 
-			using (TarInputStream tarIn = new TarInputStream(ms2))
-			{
+			using (TarInputStream tarIn = new TarInputStream(ms2)) {
 				TarEntry nextEntry = tarIn.GetNextEntry();
-			
+
 				Assert.AreEqual(nextEntry.Name, name, "Name match failure");
 			}
 		}
-		
+
 		/// <summary>
 		/// Check that long names are handled correctly for reading and writing.
 		/// </summary>
@@ -218,33 +200,32 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 		public void LongNames()
 		{
 			TryLongName("11111111112222222222333333333344444444445555555555" +
-			            "6666666666777777777788888888889999999999000000000");
-			
+						"6666666666777777777788888888889999999999000000000");
+
 			TryLongName("11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000");
-			
+						"66666666667777777777888888888899999999990000000000");
+
 			TryLongName("11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000" +
-			            "1");
-			
+						"66666666667777777777888888888899999999990000000000" +
+						"1");
+
 			TryLongName("11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000" +
-			            "11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000");
-			
+						"66666666667777777777888888888899999999990000000000" +
+						"11111111112222222222333333333344444444445555555555" +
+						"66666666667777777777888888888899999999990000000000");
+
 			TryLongName("11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000" +
-			            "11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000" +
-			            "11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000" +
-			            "11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000" +
-			            "11111111112222222222333333333344444444445555555555" +
-			            "66666666667777777777888888888899999999990000000000");
-			
-			for (int n = 1; n < 1024; ++n)
-			{
+						"66666666667777777777888888888899999999990000000000" +
+						"11111111112222222222333333333344444444445555555555" +
+						"66666666667777777777888888888899999999990000000000" +
+						"11111111112222222222333333333344444444445555555555" +
+						"66666666667777777777888888888899999999990000000000" +
+						"11111111112222222222333333333344444444445555555555" +
+						"66666666667777777777888888888899999999990000000000" +
+						"11111111112222222222333333333344444444445555555555" +
+						"66666666667777777777888888888899999999990000000000");
+
+			for (int n = 1; n < 1024; ++n) {
 				string format = "{0," + n + "}";
 				string formatted = string.Format(format, "A");
 				TryLongName(formatted);
@@ -302,47 +283,46 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 			Assert.IsFalse(h1.Equals(h2));
 			h2.LinkName = h1.LinkName;
 			Assert.IsTrue(h1.Equals(h2));
-		
+
 			h1.Magic = "ustar";
 			Assert.IsFalse(h1.Equals(h2));
 			h2.Magic = h1.Magic;
 			Assert.IsTrue(h1.Equals(h2));
-		
+
 			h1.Version = "1";
 			Assert.IsFalse(h1.Equals(h2));
 			h2.Version = h1.Version;
 			Assert.IsTrue(h1.Equals(h2));
-		
+
 			h1.UserName = "user";
 			Assert.IsFalse(h1.Equals(h2));
 			h2.UserName = h1.UserName;
 			Assert.IsTrue(h1.Equals(h2));
-		
+
 			h1.GroupName = "group";
 			Assert.IsFalse(h1.Equals(h2));
 			h2.GroupName = h1.GroupName;
 			Assert.IsTrue(h1.Equals(h2));
-		
-		
+
+
 			h1.DevMajor = 165;
 			Assert.IsFalse(h1.Equals(h2));
 			h2.DevMajor = h1.DevMajor;
 			Assert.IsTrue(h1.Equals(h2));
-		
+
 			h1.DevMinor = 164;
 			Assert.IsFalse(h1.Equals(h2));
 			h2.DevMinor = h1.DevMinor;
 			Assert.IsTrue(h1.Equals(h2));
-			
+
 		}
-		
+
 		[Test]
 		[Category("Tar")]
 		public void Checksum()
 		{
 			MemoryStream ms = new MemoryStream();
-			using ( TarOutputStream tarOut = new TarOutputStream(ms) )
-			{
+			using (TarOutputStream tarOut = new TarOutputStream(ms)) {
 				DateTime modTime = DateTime.Now;
 
 				TarEntry entry = TarEntry.CreateTarEntry("TestEntry");
@@ -356,8 +336,7 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 			ms2.Seek(0, SeekOrigin.Begin);
 			TarEntry nextEntry;
 
-			using (TarInputStream tarIn = new TarInputStream(ms2))
-			{
+			using (TarInputStream tarIn = new TarInputStream(ms2)) {
 				nextEntry = tarIn.GetNextEntry();
 				Assert.IsTrue(nextEntry.TarHeader.IsChecksumValid, "Checksum should be valid");
 			}
@@ -368,19 +347,15 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 			ms3.Write(new byte[1] { 34 }, 0, 1);
 			ms3.Seek(0, SeekOrigin.Begin);
 
-			using (TarInputStream tarIn = new TarInputStream(ms3))
-			{
+			using (TarInputStream tarIn = new TarInputStream(ms3)) {
 				bool trapped = false;
-			
-				try
-				{
+
+				try {
 					nextEntry = tarIn.GetNextEntry();
-				}
-				catch (TarException)
-				{
+				} catch (TarException) {
 					trapped = true;
 				}
-			
+
 				Assert.IsTrue(trapped, "Checksum should be invalid");
 			}
 		}
@@ -396,8 +371,7 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 			TarEntry entry;
 			DateTime modTime = DateTime.Now;
 
-			using (TarOutputStream tarOut = new TarOutputStream(ms))
-			{
+			using (TarOutputStream tarOut = new TarOutputStream(ms)) {
 				entry = TarEntry.CreateTarEntry("NUnitTestEntry");
 				entry.GroupId = 12;
 				entry.UserId = 14;
@@ -405,80 +379,78 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 				entry.UserName = "NUnitTestUserName";
 				entry.GroupName = "NUnitTestGroupName";
 				entry.TarHeader.Mode = 12345;
-			
+
 				tarOut.PutNextEntry(entry);
 			}
 
 			MemoryStream ms2 = new MemoryStream();
 			ms2.Write(ms.GetBuffer(), 0, ms.GetBuffer().Length);
 			ms2.Seek(0, SeekOrigin.Begin);
-			
-			using (TarInputStream tarIn = new TarInputStream(ms2))
-			{
+
+			using (TarInputStream tarIn = new TarInputStream(ms2)) {
 				TarEntry nextEntry = tarIn.GetNextEntry();
 				Assert.AreEqual(entry.TarHeader.Checksum, nextEntry.TarHeader.Checksum, "Checksum");
-			
+
 				Assert.IsTrue(nextEntry.Equals(entry), "Entries should be equal");
 				Assert.IsTrue(nextEntry.TarHeader.Equals(entry.TarHeader), "Headers should match");
 
 				// Tar only stores seconds 
-				DateTime truncatedTime = new DateTime(modTime.Year, modTime.Month, modTime.Day, 
+				DateTime truncatedTime = new DateTime(modTime.Year, modTime.Month, modTime.Day,
 					modTime.Hour, modTime.Minute, modTime.Second);
 				Assert.AreEqual(truncatedTime, nextEntry.ModTime, "Modtimes should match");
-			
+
 				int entryCount = 0;
-				while ( nextEntry != null )
-				{
+				while (nextEntry != null) {
 					++entryCount;
 					nextEntry = tarIn.GetNextEntry();
 				}
-			
+
 				Assert.AreEqual(1, entryCount, "Expected 1 entry");
 			}
 		}
-		
+
 		/// <summary>
 		/// Check invalid mod times are detected
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+		[Category("Tar")]
+		[ExpectedException(typeof(ArgumentOutOfRangeException))]
 		public void InvalidModTime()
 		{
 			TarEntry e = TarEntry.CreateTarEntry("test");
 			e.ModTime = DateTime.MinValue;
 		}
-		
+
 		/// <summary>
 		/// Check invalid sizes are detected
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+		[Category("Tar")]
+		[ExpectedException(typeof(ArgumentOutOfRangeException))]
 		public void InvalidSize()
 		{
 			TarEntry e = TarEntry.CreateTarEntry("test");
 			e.Size = -6;
 		}
-		
+
 		/// <summary>
 		/// Check invalid names are detected
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        [ExpectedException(typeof(ArgumentNullException))]
+		[Category("Tar")]
+		[ExpectedException(typeof(ArgumentNullException))]
 		public void InvalidName()
 		{
 			TarEntry e = TarEntry.CreateTarEntry("test");
 			e.Name = null;
 		}
-		
+
 		/// <summary>
 		/// Check setting user and group names.
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        public void UserAndGroupNames()
+		[Category("Tar")]
+		public void UserAndGroupNames()
 		{
 			TarEntry e = TarEntry.CreateTarEntry("test");
 			e.UserName = null;
@@ -488,37 +460,37 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 			e.GroupName = null;
 			Assert.AreEqual("None", e.GroupName, "default group name is None");
 		}
-		
+
 		/// <summary>
 		/// Check invalid magic values are detected
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        [ExpectedException(typeof(ArgumentNullException))]
+		[Category("Tar")]
+		[ExpectedException(typeof(ArgumentNullException))]
 		public void InvalidMagic()
 		{
 			TarEntry e = TarEntry.CreateTarEntry("test");
 			e.TarHeader.Magic = null;
 		}
-		
+
 		/// <summary>
 		/// Check invalid link names are detected
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        [ExpectedException(typeof(ArgumentNullException))]
+		[Category("Tar")]
+		[ExpectedException(typeof(ArgumentNullException))]
 		public void InvalidLinkName()
 		{
 			TarEntry e = TarEntry.CreateTarEntry("test");
 			e.TarHeader.LinkName = null;
 		}
-		
+
 		/// <summary>
 		/// Check invalid version names are detected
 		/// </summary>
 		[Test]
-        [Category("Tar")]
-        [ExpectedException(typeof(ArgumentNullException))]
+		[Category("Tar")]
+		[ExpectedException(typeof(ArgumentNullException))]
 		public void InvalidVersionName()
 		{
 			TarEntry e = TarEntry.CreateTarEntry("test");
@@ -526,8 +498,8 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 		}
 
 		[Test]
-        [Category("Tar")]
-        public void CloningAndUniqueness()
+		[Category("Tar")]
+		public void CloningAndUniqueness()
 		{
 			// Partial test of cloning for TarHeader and TarEntry
 			TarEntry e = TarEntry.CreateTarEntry("ohsogood");
@@ -568,60 +540,60 @@ namespace ICSharpCode.SharpZipLib.Tests.Tar {
 			Assert.AreNotEqual(headerD.LinkName, entryf.TarHeader.LinkName, "Entry headers should be unique");
 		}
 
-        [Test]
-        [Category("Tar")]
-        public void OutputStreamOwnership()
-        {
-            TrackedMemoryStream memStream = new TrackedMemoryStream();
-            TarOutputStream s = new TarOutputStream(memStream);
+		[Test]
+		[Category("Tar")]
+		public void OutputStreamOwnership()
+		{
+			TrackedMemoryStream memStream = new TrackedMemoryStream();
+			TarOutputStream s = new TarOutputStream(memStream);
 
-            Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
-            Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
+			Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
+			Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
 
-            s.Close();
+			s.Close();
 
-            Assert.IsTrue(memStream.IsClosed, "Should be closed after parent owner close");
-            Assert.IsTrue(memStream.IsDisposed, "Should be disposed after parent owner close");
+			Assert.IsTrue(memStream.IsClosed, "Should be closed after parent owner close");
+			Assert.IsTrue(memStream.IsDisposed, "Should be disposed after parent owner close");
 
-            memStream = new TrackedMemoryStream();
-            s = new TarOutputStream(memStream);
+			memStream = new TrackedMemoryStream();
+			s = new TarOutputStream(memStream);
 
-            Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
-            Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
+			Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
+			Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
 
-            s.IsStreamOwner = false;
-            s.Close();
+			s.IsStreamOwner = false;
+			s.Close();
 
-            Assert.IsFalse(memStream.IsClosed, "Should not be closed after parent owner close");
-            Assert.IsFalse(memStream.IsDisposed, "Should not be disposed after parent owner close");
-        }
+			Assert.IsFalse(memStream.IsClosed, "Should not be closed after parent owner close");
+			Assert.IsFalse(memStream.IsDisposed, "Should not be disposed after parent owner close");
+		}
 
-        [Test]
-        [Category("Tar")]
-        public void InputStreamOwnership()
-        {
-            TrackedMemoryStream memStream = new TrackedMemoryStream();
-            TarInputStream s = new TarInputStream(memStream);
+		[Test]
+		[Category("Tar")]
+		public void InputStreamOwnership()
+		{
+			TrackedMemoryStream memStream = new TrackedMemoryStream();
+			TarInputStream s = new TarInputStream(memStream);
 
-            Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
-            Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
+			Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
+			Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
 
-            s.Close();
+			s.Close();
 
-            Assert.IsTrue(memStream.IsClosed, "Should be closed after parent owner close");
-            Assert.IsTrue(memStream.IsDisposed, "Should be disposed after parent owner close");
+			Assert.IsTrue(memStream.IsClosed, "Should be closed after parent owner close");
+			Assert.IsTrue(memStream.IsDisposed, "Should be disposed after parent owner close");
 
-            memStream = new TrackedMemoryStream();
-            s = new TarInputStream(memStream);
+			memStream = new TrackedMemoryStream();
+			s = new TarInputStream(memStream);
 
-            Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
-            Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
+			Assert.IsFalse(memStream.IsClosed, "Shouldnt be closed initially");
+			Assert.IsFalse(memStream.IsDisposed, "Shouldnt be disposed initially");
 
-            s.IsStreamOwner = false;
-            s.Close();
+			s.IsStreamOwner = false;
+			s.Close();
 
-            Assert.IsFalse(memStream.IsClosed, "Should not be closed after parent owner close");
-            Assert.IsFalse(memStream.IsDisposed, "Should not be disposed after parent owner close");
-        }
-    }
+			Assert.IsFalse(memStream.IsClosed, "Should not be closed after parent owner close");
+			Assert.IsFalse(memStream.IsDisposed, "Should not be disposed after parent owner close");
+		}
+	}
 }

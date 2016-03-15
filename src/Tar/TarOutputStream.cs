@@ -40,9 +40,9 @@
 using System;
 using System.IO;
 
-namespace ICSharpCode.SharpZipLib.Tar 
+namespace ICSharpCode.SharpZipLib.Tar
 {
-	
+
 	/// <summary>
 	/// The TarOutputStream writes a UNIX tar archive as an OutputStream.
 	/// Methods are provided to put entries, and then write their contents
@@ -60,7 +60,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 			: this(outputStream, TarBuffer.DefaultBlockFactor)
 		{
 		}
-		
+
 		/// <summary>
 		/// Construct TarOutputStream with user specified block factor
 		/// </summary>
@@ -68,88 +68,75 @@ namespace ICSharpCode.SharpZipLib.Tar
 		/// <param name="blockFactor">blocking factor</param>
 		public TarOutputStream(Stream outputStream, int blockFactor)
 		{
-			if ( outputStream == null )
-			{
+			if (outputStream == null) {
 				throw new ArgumentNullException("outputStream");
 			}
 
 			this.outputStream = outputStream;
 			buffer = TarBuffer.CreateOutputTarBuffer(outputStream, blockFactor);
-			
-			assemblyBuffer = new byte[TarBuffer.BlockSize];
-			blockBuffer  = new byte[TarBuffer.BlockSize];
-		}
-		#endregion		
 
-        /// <summary>
-        /// Get/set flag indicating ownership of the underlying stream.
-        /// When the flag is true <see cref="Close"></see> will close the underlying stream also.
-        /// </summary>
-        public bool IsStreamOwner
-        {
-            get { return buffer.IsStreamOwner; }
-            set { buffer.IsStreamOwner = value; }
-        }
+			assemblyBuffer = new byte[TarBuffer.BlockSize];
+			blockBuffer = new byte[TarBuffer.BlockSize];
+		}
+		#endregion
+
+		/// <summary>
+		/// Get/set flag indicating ownership of the underlying stream.
+		/// When the flag is true <see cref="Close"></see> will close the underlying stream also.
+		/// </summary>
+		public bool IsStreamOwner {
+			get { return buffer.IsStreamOwner; }
+			set { buffer.IsStreamOwner = value; }
+		}
 
 		/// <summary>
 		/// true if the stream supports reading; otherwise, false.
 		/// </summary>
-		public override bool CanRead 
-		{
-			get 
-			{
+		public override bool CanRead {
+			get {
 				return outputStream.CanRead;
 			}
 		}
-		
+
 		/// <summary>
 		/// true if the stream supports seeking; otherwise, false.
 		/// </summary>
-		public override bool CanSeek 
-		{
-			get 
-			{
+		public override bool CanSeek {
+			get {
 				return outputStream.CanSeek;
 			}
 		}
-		
+
 		/// <summary>
 		/// true if stream supports writing; otherwise, false.
 		/// </summary>
-		public override bool CanWrite 
-		{
-			get 
-			{
+		public override bool CanWrite {
+			get {
 				return outputStream.CanWrite;
 			}
 		}
-		
+
 		/// <summary>
 		/// length of stream in bytes
 		/// </summary>
-		public override long Length 
-		{
-			get 
-			{
+		public override long Length {
+			get {
 				return outputStream.Length;
 			}
 		}
-		
+
 		/// <summary>
 		/// gets or sets the position within the current stream.
 		/// </summary>
-		public override long Position 
-		{
-			get 
-			{
+		public override long Position {
+			get {
 				return outputStream.Position;
 			}
-			set 
-			{
+			set {
 				outputStream.Position = value;
 			}
 		}
-		
+
 		/// <summary>
 		/// set the position within the current stream
 		/// </summary>
@@ -160,7 +147,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 		{
 			return outputStream.Seek(offset, origin);
 		}
-		
+
 		/// <summary>
 		/// Set the length of the current stream
 		/// </summary>
@@ -169,7 +156,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 		{
 			outputStream.SetLength(value);
 		}
-		
+
 		/// <summary>
 		/// Read a byte from the stream and advance the position within the stream 
 		/// by one byte or returns -1 if at the end of the stream.
@@ -179,7 +166,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 		{
 			return outputStream.ReadByte();
 		}
-		
+
 		/// <summary>
 		/// read bytes from the current stream and advance the position within the 
 		/// stream by the number of bytes read.
@@ -202,20 +189,19 @@ namespace ICSharpCode.SharpZipLib.Tar
 		{
 			outputStream.Flush();
 		}
-				
+
 		/// <summary>
 		/// Ends the TAR archive without closing the underlying OutputStream.
 		/// The result is that the EOF block of nulls is written.
 		/// </summary>
 		public void Finish()
 		{
-			if ( IsEntryOpen ) 
-			{
+			if (IsEntryOpen) {
 				CloseEntry();
 			}
 			WriteEofBlock();
 		}
-		
+
 		/// <summary>
 		/// Ends the TAR archive and closes the underlying OutputStream.
 		/// </summary>
@@ -223,19 +209,17 @@ namespace ICSharpCode.SharpZipLib.Tar
 		/// TarBuffer's Close().</remarks>
 		public override void Close()
 		{
-			if ( !isClosed )
-			{
+			if (!isClosed) {
 				isClosed = true;
 				Finish();
 				buffer.Close();
 			}
 		}
-		
+
 		/// <summary>
 		/// Get the record size being used by this stream's TarBuffer.
 		/// </summary>
-		public int RecordSize
-		{
+		public int RecordSize {
 			get { return buffer.RecordSize; }
 		}
 
@@ -250,12 +234,11 @@ namespace ICSharpCode.SharpZipLib.Tar
 		{
 			return buffer.RecordSize;
 		}
-		
+
 		/// <summary>
 		/// Get a value indicating wether an entry is open, requiring more data to be written.
 		/// </summary>
-		bool IsEntryOpen
-		{
+		bool IsEntryOpen {
 			get { return (currBytes < currSize); }
 
 		}
@@ -274,7 +257,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 		/// </param>
 		public void PutNextEntry(TarEntry entry)
 		{
-			if ( entry == null ) {
+			if (entry == null) {
 				throw new ArgumentNullException("entry");
 			}
 
@@ -288,7 +271,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 				longHeader.GroupName = entry.GroupName;
 				longHeader.UserName = entry.UserName;
 				longHeader.LinkName = "";
-                longHeader.Size = entry.TarHeader.Name.Length + 1;	// Plus one to avoid dropping last char
+				longHeader.Size = entry.TarHeader.Name.Length + 1;  // Plus one to avoid dropping last char
 
 				longHeader.WriteHeader(blockBuffer);
 				buffer.WriteBlock(blockBuffer);  // Add special long filename header block
@@ -302,15 +285,15 @@ namespace ICSharpCode.SharpZipLib.Tar
 					buffer.WriteBlock(blockBuffer);
 				}
 			}
-			
+
 			entry.WriteEntryHeader(blockBuffer);
 			buffer.WriteBlock(blockBuffer);
-			
+
 			currBytes = 0;
-			
+
 			currSize = entry.IsDirectory ? 0 : entry.Size;
 		}
-		
+
 		/// <summary>
 		/// Close an entry. This method MUST be called for all file
 		/// entries that contain data. The reason is that we must
@@ -324,13 +307,13 @@ namespace ICSharpCode.SharpZipLib.Tar
 		{
 			if (assemblyBufferLength > 0) {
 				Array.Clear(assemblyBuffer, assemblyBufferLength, assemblyBuffer.Length - assemblyBufferLength);
-				
+
 				buffer.WriteBlock(assemblyBuffer);
-				
+
 				currBytes += assemblyBufferLength;
 				assemblyBufferLength = 0;
 			}
-			
+
 			if (currBytes < currSize) {
 				string errorText = string.Format(
 					"Entry closed at '{0}' before the '{1}' bytes specified in the header were written",
@@ -338,7 +321,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 				throw new TarException(errorText);
 			}
 		}
-		
+
 		/// <summary>
 		/// Writes a byte to the current tar archive entry.
 		/// This method simply calls Write(byte[], int, int).
@@ -350,7 +333,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 		{
 			Write(new byte[] { value }, 0, 1);
 		}
-		
+
 		/// <summary>
 		/// Writes bytes to the current tar archive entry. This method
 		/// is aware of the current entry and will throw an exception if
@@ -371,26 +354,23 @@ namespace ICSharpCode.SharpZipLib.Tar
 		/// </param>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
-			if ( buffer == null ) {
+			if (buffer == null) {
 				throw new ArgumentNullException("buffer");
 			}
-			
-			if ( offset < 0 )
-			{
+
+			if (offset < 0) {
 #if NETCF_1_0
 				throw new ArgumentOutOfRangeException("offset");
 #else
 				throw new ArgumentOutOfRangeException("offset", "Cannot be negative");
-#endif				
+#endif
 			}
 
-			if ( buffer.Length - offset < count )
-			{
+			if (buffer.Length - offset < count) {
 				throw new ArgumentException("offset and count combination is invalid");
 			}
 
-			if ( count < 0 )
-			{
+			if (count < 0) {
 #if NETCF_1_0
 				throw new ArgumentOutOfRangeException("count");
 #else
@@ -398,16 +378,16 @@ namespace ICSharpCode.SharpZipLib.Tar
 #endif
 			}
 
-			if ( (currBytes + count) > currSize ) {
+			if ((currBytes + count) > currSize) {
 				string errorText = string.Format("request to write '{0}' bytes exceeds size in header of '{1}' bytes",
 					count, this.currSize);
 #if NETCF_1_0
 				throw new ArgumentOutOfRangeException("count");
 #else
 				throw new ArgumentOutOfRangeException("count", errorText);
-#endif				
+#endif
 			}
-			
+
 			//
 			// We have to deal with assembly!!!
 			// The programmer can be writing little 32 byte chunks for all
@@ -416,19 +396,19 @@ namespace ICSharpCode.SharpZipLib.Tar
 			//        eliminate some of the buffer copying.
 			//
 			if (assemblyBufferLength > 0) {
-				if ((assemblyBufferLength + count ) >= blockBuffer.Length) {
+				if ((assemblyBufferLength + count) >= blockBuffer.Length) {
 					int aLen = blockBuffer.Length - assemblyBufferLength;
-					
+
 					Array.Copy(assemblyBuffer, 0, blockBuffer, 0, assemblyBufferLength);
 					Array.Copy(buffer, offset, blockBuffer, assemblyBufferLength, aLen);
-					
+
 					this.buffer.WriteBlock(blockBuffer);
-					
+
 					currBytes += blockBuffer.Length;
-					
-					offset    += aLen;
+
+					offset += aLen;
 					count -= aLen;
-					
+
 					assemblyBufferLength = 0;
 				} else {
 					Array.Copy(buffer, offset, assemblyBuffer, assemblyBufferLength, count);
@@ -437,7 +417,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 					count -= count;
 				}
 			}
-			
+
 			//
 			// When we get here we have EITHER:
 			//   o An empty "assembly" buffer.
@@ -449,16 +429,16 @@ namespace ICSharpCode.SharpZipLib.Tar
 					assemblyBufferLength += count;
 					break;
 				}
-				
+
 				this.buffer.WriteBlock(buffer, offset);
-				
+
 				int bufferLength = blockBuffer.Length;
 				currBytes += bufferLength;
 				count -= bufferLength;
 				offset += bufferLength;
 			}
 		}
-		
+
 		/// <summary>
 		/// Write an EOF (end of archive) block to the tar archive.
 		/// An EOF block consists of all zeros.
@@ -474,7 +454,7 @@ namespace ICSharpCode.SharpZipLib.Tar
 		/// bytes written for this entry so far
 		/// </summary>
 		long currBytes;
-		
+
 		/// <summary>
 		/// current 'Assembly' buffer length
 		/// </summary>		
@@ -499,12 +479,12 @@ namespace ICSharpCode.SharpZipLib.Tar
 		/// 'Assembly' buffer used to assemble data before writing
 		/// </summary>
 		protected byte[] assemblyBuffer;
-		
+
 		/// <summary>
 		/// TarBuffer used to provide correct blocking factor
 		/// </summary>
 		protected TarBuffer buffer;
-		
+
 		/// <summary>
 		/// the destination stream for the archive contents
 		/// </summary>

@@ -915,7 +915,7 @@ namespace ICSharpCode.SharpZipLib.BZip2
 		
 		int bsBuff;
 		int bsLive;
-		IChecksum mCrc = new StrangeCrc();
+		IChecksum mCrc = new BZip2Crc();
 		
 		bool[] inUse = new bool[256];
 		int    nInUse;

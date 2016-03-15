@@ -39,8 +39,9 @@ using System;
 using System.Runtime.Serialization;
 #endif
 
-namespace ICSharpCode.SharpZipLib.Tar {
-	
+namespace ICSharpCode.SharpZipLib.Tar
+{
+
 	/// <summary>
 	/// This exception is used to indicate that there is a problem
 	/// with a TAR archive header.

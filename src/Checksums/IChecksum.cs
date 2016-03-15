@@ -11,28 +11,28 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 // Linking this library statically or dynamically with other modules is
-// making a combined work based on this library.  Thus, the terms and
+// making a combined work based on this library. Thus, the terms and
 // conditions of the GNU General Public License cover the whole
 // combination.
-// 
+//
 // As a special exception, the copyright holders of this library give you
 // permission to link this library with independent modules to produce an
 // executable, regardless of the license terms of these independent
 // modules, and to copy and distribute the resulting executable under
 // terms of your choice, provided that you also meet, for each linked
 // independent module, the terms and conditions of the license of that
-// module.  An independent module is a module which is not derived from
-// or based on this library.  If you modify this library, you may extend
+// module. An independent module is a module which is not derived from
+// or based on this library. If you modify this library, you may extend
 // this exception to your version of the library, but you are not
-// obligated to do so.  If you do not wish to do so, delete this
+// obligated to do so. If you do not wish to do so, delete this
 // exception statement from your version.
 
 using System;
@@ -40,60 +40,59 @@ using System;
 namespace ICSharpCode.SharpZipLib.Checksums
 {
 
-    /// <summary>
-    /// Interface to compute a data checksum used by checked input/output streams.
-    /// A data checksum can be updated by one byte or with a byte array. After each
-    /// update the value of the current checksum can be returned by calling
-    /// <code>getValue</code>. The complete checksum object can also be reset
-    /// so it can be used again with new data.
-    /// </summary>
-    public interface IChecksum
-    {
-        /// <summary>
-        /// Returns the data checksum computed so far.
-        /// </summary>
-        /// <remarks>
-        /// Unsigned integers are not CLS compliant. Changing this to return a
-        /// UInt32 results in a compiler warning.
-        /// </remarks>
-        Int64 Value
-        {
-            get;
-        }
+	/// <summary>
+	/// Interface to compute a data checksum used by checked input/output streams.
+	/// A data checksum can be updated by one byte or with a byte array. After each
+	/// update the value of the current checksum can be returned by calling
+	/// <code>getValue</code>. The complete checksum object can also be reset
+	/// so it can be used again with new data.
+	/// </summary>
+	public interface IChecksum
+	{
+		/// <summary>
+		/// Returns the data checksum computed so far.
+		/// </summary>
+		/// <remarks>
+		/// Unsigned integers are not CLS compliant. Changing this to return a
+		/// UInt32 results in a compiler warning.
+		/// </remarks>
+		Int64 Value {
+			get;
+		}
 
-        /// <summary>
-        /// Resets the data checksum as if no update was ever called.
-        /// </summary>
-        void Reset();
+		/// <summary>
+		/// Resets the data checksum as if no update was ever called.
+		/// </summary>
+		void Reset();
 
-        /// <summary>
-        /// Adds one byte to the data checksum.
-        /// </summary>
-        /// <param name = "value">
-        /// the data value to add. The high byte of the int is ignored.
-        /// </param>
-        void Update(Int32 value);
+		/// <summary>
+		/// Adds one byte to the data checksum.
+		/// </summary>
+		/// <param name = "value">
+		/// the data value to add. The high byte of the int is ignored.
+		/// </param>
+		void Update(Int32 value);
 
-        /// <summary>
-        /// Updates the data checksum with the bytes taken from the array.
-        /// </summary>
-        /// <param name="buffer">
-        /// buffer an array of bytes
-        /// </param>
-        void Update(Byte[] buffer);
+		/// <summary>
+		/// Updates the data checksum with the bytes taken from the array.
+		/// </summary>
+		/// <param name="buffer">
+		/// buffer an array of bytes
+		/// </param>
+		void Update(Byte[] buffer);
 
-        /// <summary>
-        /// Adds the byte array to the data checksum.
-        /// </summary>
-        /// <param name = "buffer">
-        /// The buffer which contains the data
-        /// </param>
-        /// <param name = "offset">
-        /// The offset in the buffer where the data starts
-        /// </param>
-        /// <param name = "count">
-        /// the number of data bytes to add.
-        /// </param>
-        void Update(Byte[] buffer, Int32 offset, Int32 count);
-    }
+		/// <summary>
+		/// Adds the byte array to the data checksum.
+		/// </summary>
+		/// <param name = "buffer">
+		/// The buffer which contains the data
+		/// </param>
+		/// <param name = "offset">
+		/// The offset in the buffer where the data starts
+		/// </param>
+		/// <param name = "count">
+		/// the number of data bytes to add.
+		/// </param>
+		void Update(Byte[] buffer, Int32 offset, Int32 count);
+	}
 }
