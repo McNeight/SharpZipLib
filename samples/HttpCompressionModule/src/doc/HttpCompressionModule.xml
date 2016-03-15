@@ -19,124 +19,6 @@
             Summary description for DeflateFilter.
             </summary>
         </member>
-        <member name="T:blowery.Web.HttpModules.HttpCompressingFilter">
-            <summary>
-            Base for any HttpFilter that performing compression
-            </summary>
-            <remarks>
-            When implementing this class, you need to implement a <see cref="T:blowery.Web.HttpModules.HttpOutputFilter"/>
-            along with a NameOfContentEncoding property.  The latter corresponds to a 
-            content coding (see http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.5)
-            that your implementation will support.
-            </remarks>
-        </member>
-        <member name="T:blowery.Web.HttpModules.HttpOutputFilter">
-            <summary>
-            The base of anything you want to latch onto the Filter property of a <see cref="T:System.Web.HttpResponse"/>
-            object.
-            </summary>
-            <remarks>
-            <p></p>These are generally used with the <see cref="T:blowery.Web.HttpModules.HttpCompressionModule"/> but you could really use them in
-            other HttpModules.  This is a general, write-only stream that writes to some underlying stream.  When implementing
-            a real class, you have to override void Write(byte[], int offset, int count).  Your work will be performed there.
-            </remarks>
-        </member>
-        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.#ctor(System.IO.Stream)">
-            <summary>
-            Subclasses need to call this on contruction to setup the underlying stream
-            </summary>
-            <param name="baseStream">The stream we're wrapping up in a filter</param>
-        </member>
-        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Seek(System.Int64,System.IO.SeekOrigin)">
-            <summary>
-            Not supported.  Throws an exception saying so.
-            </summary>
-            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
-        </member>
-        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.SetLength(System.Int64)">
-            <summary>
-            Not supported.  Throws an exception saying so.
-            </summary>
-            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
-        </member>
-        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Close">
-            <summary>
-            Closes this Filter and the underlying stream.
-            </summary>
-            <remarks>
-            If you override, call up to this method in your implementation.
-            </remarks>
-        </member>
-        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Flush">
-            <summary>
-            Fluses this Filter and the underlying stream.
-            </summary>
-            <remarks>
-            If you override, call up to this method in your implementation.
-            </remarks>
-        </member>
-        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Read(System.Byte[],System.Int32,System.Int32)">
-            <summary>
-            Not supported.
-            </summary>
-            <param name="buffer">The buffer to write into.</param>
-            <param name="offset">The offset on the buffer to write into</param>
-            <param name="count">The number of bytes to write.  Must be less than buffer.Length</param>
-            <returns>An int telling you how many bytes were written</returns>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.BaseStream">
-            <summary>
-            Allow subclasses access to the underlying stream
-            </summary>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.CanRead">
-            <summary>
-            False.  These are write-only streams
-            </summary>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.CanSeek">
-            <summary>
-            False.  These are write-only streams
-            </summary>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.CanWrite">
-            <summary>
-            True.  You can write to the stream.  May change if you call Close or Dispose
-            </summary>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.Length">
-            <summary>
-            Not supported.  Throws an exception saying so.
-            </summary>
-            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.Position">
-            <summary>
-            Not supported.  Throws an exception saying so.
-            </summary>
-            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
-        </member>
-        <member name="M:blowery.Web.HttpModules.HttpCompressingFilter.#ctor(System.IO.Stream,blowery.Web.HttpModules.CompressionLevels)">
-            <summary>
-            Protected constructor that sets up the underlying stream we're compressing into
-            </summary>
-            <param name="baseStream">The stream we're wrapping up</param>
-            <param name="compressionLevel">The level of compression to use when compressing the content</param>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpCompressingFilter.NameOfContentEncoding">
-            <summary>
-            The name of the content-encoding that's being implemented
-            </summary>
-            <remarks>
-            See http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.5 for more
-            details on content codings.
-            </remarks>
-        </member>
-        <member name="P:blowery.Web.HttpModules.HttpCompressingFilter.CompressionLevel">
-            <summary>
-            Allow inheriting classes to get access the the level of compression that should be used
-            </summary>
-        </member>
         <member name="F:blowery.Web.HttpModules.DeflateFilter.m_stream">
             <summary>
             compression stream member
@@ -165,14 +47,14 @@
             <param name="offset">The offset into the supplied buffer to start</param>
             <param name="count">The number of bytes to write</param>
         </member>
-        <member name="M:blowery.Web.HttpModules.DeflateFilter.Close">
-            <summary>
-            Closes this Filter and calls the base class implementation.
-            </summary>
-        </member>
         <member name="P:blowery.Web.HttpModules.DeflateFilter.NameOfContentEncoding">
             <summary>
             Return the Http name for this encoding.  Here, deflate.
+            </summary>
+        </member>
+        <member name="M:blowery.Web.HttpModules.DeflateFilter.Close">
+            <summary>
+            Closes this Filter and calls the base class implementation.
             </summary>
         </member>
         <member name="T:blowery.Web.HttpModules.GZipFilter">
@@ -201,14 +83,46 @@
             <param name="offset">The offset into the buffer to start reading bytes</param>
             <param name="count">The number of bytes to write</param>
         </member>
+        <member name="P:blowery.Web.HttpModules.GZipFilter.NameOfContentEncoding">
+            <summary>
+            The Http name of this encoding.  Here, gzip.
+            </summary>
+        </member>
         <member name="M:blowery.Web.HttpModules.GZipFilter.Close">
             <summary>
             Closes this Filter and calls the base class implementation.
             </summary>
         </member>
-        <member name="P:blowery.Web.HttpModules.GZipFilter.NameOfContentEncoding">
+        <member name="T:blowery.Web.HttpModules.HttpCompressingFilter">
             <summary>
-            The Http name of this encoding.  Here, gzip.
+            Base for any HttpFilter that performing compression
+            </summary>
+            <remarks>
+            When implementing this class, you need to implement a <see cref="T:blowery.Web.HttpModules.HttpOutputFilter"/>
+            along with a NameOfContentEncoding property.  The latter corresponds to a 
+            content coding (see http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.5)
+            that your implementation will support.
+            </remarks>
+        </member>
+        <member name="M:blowery.Web.HttpModules.HttpCompressingFilter.#ctor(System.IO.Stream,blowery.Web.HttpModules.CompressionLevels)">
+            <summary>
+            Protected constructor that sets up the underlying stream we're compressing into
+            </summary>
+            <param name="baseStream">The stream we're wrapping up</param>
+            <param name="compressionLevel">The level of compression to use when compressing the content</param>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpCompressingFilter.NameOfContentEncoding">
+            <summary>
+            The name of the content-encoding that's being implemented
+            </summary>
+            <remarks>
+            See http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.5 for more
+            details on content codings.
+            </remarks>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpCompressingFilter.CompressionLevel">
+            <summary>
+            Allow inheriting classes to get access the the level of compression that should be used
             </summary>
         </member>
         <member name="T:blowery.Web.HttpModules.HttpCompressionModule">
@@ -329,6 +243,92 @@
             <summary>
             Use a low level of compression.  Sacrifices size for speed.
             </summary>
+        </member>
+        <member name="T:blowery.Web.HttpModules.HttpOutputFilter">
+            <summary>
+            The base of anything you want to latch onto the Filter property of a <see cref="T:System.Web.HttpResponse"/>
+            object.
+            </summary>
+            <remarks>
+            <p></p>These are generally used with the <see cref="T:blowery.Web.HttpModules.HttpCompressionModule"/> but you could really use them in
+            other HttpModules.  This is a general, write-only stream that writes to some underlying stream.  When implementing
+            a real class, you have to override void Write(byte[], int offset, int count).  Your work will be performed there.
+            </remarks>
+        </member>
+        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.#ctor(System.IO.Stream)">
+            <summary>
+            Subclasses need to call this on contruction to setup the underlying stream
+            </summary>
+            <param name="baseStream">The stream we're wrapping up in a filter</param>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.BaseStream">
+            <summary>
+            Allow subclasses access to the underlying stream
+            </summary>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.CanRead">
+            <summary>
+            False.  These are write-only streams
+            </summary>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.CanSeek">
+            <summary>
+            False.  These are write-only streams
+            </summary>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.CanWrite">
+            <summary>
+            True.  You can write to the stream.  May change if you call Close or Dispose
+            </summary>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.Length">
+            <summary>
+            Not supported.  Throws an exception saying so.
+            </summary>
+            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
+        </member>
+        <member name="P:blowery.Web.HttpModules.HttpOutputFilter.Position">
+            <summary>
+            Not supported.  Throws an exception saying so.
+            </summary>
+            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
+        </member>
+        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Seek(System.Int64,System.IO.SeekOrigin)">
+            <summary>
+            Not supported.  Throws an exception saying so.
+            </summary>
+            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
+        </member>
+        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.SetLength(System.Int64)">
+            <summary>
+            Not supported.  Throws an exception saying so.
+            </summary>
+            <exception cref="T:System.NotSupportedException">Thrown.  Always.</exception>
+        </member>
+        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Close">
+            <summary>
+            Closes this Filter and the underlying stream.
+            </summary>
+            <remarks>
+            If you override, call up to this method in your implementation.
+            </remarks>
+        </member>
+        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Flush">
+            <summary>
+            Fluses this Filter and the underlying stream.
+            </summary>
+            <remarks>
+            If you override, call up to this method in your implementation.
+            </remarks>
+        </member>
+        <member name="M:blowery.Web.HttpModules.HttpOutputFilter.Read(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Not supported.
+            </summary>
+            <param name="buffer">The buffer to write into.</param>
+            <param name="offset">The offset on the buffer to write into</param>
+            <param name="count">The number of bytes to write.  Must be less than buffer.Length</param>
+            <returns>An int telling you how many bytes were written</returns>
         </member>
     </members>
 </doc>

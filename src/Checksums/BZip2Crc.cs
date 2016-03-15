@@ -45,7 +45,7 @@ namespace ICSharpCode.SharpZipLib.Checksums
 	/// </summary>
 	/// <remarks>
 	/// I think this is an implementation of the AUTODIN-II,
-	/// Ethernet & FDDI 32-bit CRC standard.Vaguely derived
+	/// Ethernet &amp; FDDI 32-bit CRC standard.Vaguely derived
 	/// from code by Rob Warnock, in Section 51 of the
 	/// comp.compression FAQ.
 	/// </remarks>
