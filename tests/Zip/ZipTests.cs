@@ -98,7 +98,7 @@ namespace ICSharpCode.SharpZipLib.Tests.Zip
 		#endregion
 	}
 
-	class MemoryDataSource : IStaticDataSource
+	class MemoryDataSource : ICSharpCode.SharpZipLib.Zip.IStaticDataSource
 	{
 		#region Constructors
 		/// <summary>
