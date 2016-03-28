@@ -126,5 +126,5 @@
     <Compile Include="Zip\IEntryFactory.cs" />
   </ItemGroup>
   <ItemGroup />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.Targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.Targets" />
 </Project>
