@@ -9,7 +9,7 @@
 #---------------------------------#
 
 # version format
-version: 0.87.{build}
+version: 0.88.{build}
 
 # you can use {branch} name in version format too
 # version: 1.0.{build}-{branch}
@@ -18,8 +18,13 @@ version: 0.87.{build}
 branches:
   # whitelist
   only:
-  - build
+  - coverity_scan
 
+  # blacklist
+  except:
+    - gh-pages
+    - master
+    - build
 # Do not build on tags (GitHub only)
 skip_tags: true
 
@@ -30,11 +35,42 @@ skip_tags: true
 # Operating system (build VM template)
 image:
 - Visual Studio 2015
-- Visual Studio 2013
 
+# scripts that are called at very beginning, before repo cloning
+init:
+# Properties, passed to MSBuild project.
+- ps: |
+    $env:BuildDir = "$env:APPVEYOR_BUILD_FOLDER\.OUTPUT"
+    $env:VersionBuild = "$env:APPVEYOR_BUILD_NUMBER"
+    $env:VersionStage = "$env:APPVEYOR_REPO_BRANCH"
+    $env:VersionTag = "$env:APPVEYOR_REPO_COMMIT"
+    
+# fetch repository as zip archive
+shallow_clone: true                 # default is "false"
+
+# environment variables
+environment:
+  CoverityProjectToken:
+    secure: n9NA/kasTqxUc8UBfQ2cBlZcDyFJvko1gcMzVTDvZq8=
+  CoverityNotificationEmail:
+    secure: j/N0ZmnUZYKnS2nGocKyNsXoKQBfWTBOg+VI4q7yMn4=
+    
 # build cache to preserve files/folders between builds
 cache:
   - packages -> **\packages.config  # preserve "packages" directory in the root of build folder but will reset it if packages.config is modified
+
+# scripts that run after cloning repository
+#install:
+  # to run script as a PowerShell command prepend it with ps:
+  #- ps: Write-Host 'This is PowerShell'
+
+# enable patching of AssemblyInfo.* files
+assembly_info:
+  patch: true
+  file: '**\AssemblyInfo.*'
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}'
 
 #---------------------------------#
 #       build configuration       #
@@ -54,26 +90,88 @@ platform: Any CPU
 # to add several configurations to build matrix:
 configuration:
   - Debug
-  - Release
 
-assembly_info:
-  patch: true
-  file: '**\AssemblyInfo.*'
-  assembly_version: '{version}'
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}'
-
-build:
-  project: ICSharpCode.SharpZipLib.sln
-  publish_nuget: true
-  publish_nuget_symbols: true
-  include_nuget_references: true
-  parallel: true
-  verbosity: normal
-
+build_script:
+- ps: |
+    $buildCmd = "C:\Program Files (x86)\MSBuild\14.0\bin\msbuild.exe"
+    $buildArgs = @(
+      "/m",
+      "/l:C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll",
+      "/p:Configuration=$env:CONFIGURATION",
+      "/p:Platform=$env:PLATFORM",
+      "ICSharpCode.SharpZipLib.sln")
+        
+    # Build project with Coverity Scan.
+    "Building project with Coverity..."
+    & "cov-build.exe" `
+      --dir cov-int `
+      --encoding=UTF-8 `
+      $buildCmd $buildArgs
+      
+    # Compress results.
+    "Compressing Coverity results..."
+    $zipEncoderDef = @'
+      namespace AnalyzeCode {
+        public class PortableFileNameEncoder: System.Text.UTF8Encoding {
+          public PortableFileNameEncoder() {}
+          public override byte[] GetBytes(string entry) {
+            return base.GetBytes(entry.Replace("\\", "/"));
+          }
+        }
+      }
+    '@
+    Add-Type -TypeDefinition $zipEncoderDef
+    [IO.Compression.ZipFile]::CreateFromDirectory(
+      "$env:APPVEYOR_BUILD_FOLDER\cov-int",
+      "$env:APPVEYOR_BUILD_FOLDER\$env:APPVEYOR_PROJECT_NAME.zip",
+      [IO.Compression.CompressionLevel]::Optimal,
+      $true,  # include root directory
+      (New-Object AnalyzeCode.PortableFileNameEncoder))
+    
+    # Upload results to Coverity server.
+    "Uploading Coverity results..."
+    Add-Type -AssemblyName "System.Net.Http"
+    $client = New-Object Net.Http.HttpClient
+    $client.Timeout = [TimeSpan]::FromMinutes(30)
+    $form = New-Object Net.Http.MultipartFormDataContent
+    # Fill token field.
+    [Net.Http.HttpContent]$formField =
+      New-Object Net.Http.StringContent($env:CoverityProjectToken)
+    $form.Add($formField, "token")
+    # Fill email field.
+    $formField =
+      New-Object Net.Http.StringContent($env:CoverityNotificationEmail)
+    $form.Add($formField, "email")
+    # Fill file field.
+    $fs = New-Object IO.FileStream(
+      "$env:APPVEYOR_BUILD_FOLDER\$env:APPVEYOR_PROJECT_NAME.zip",
+      [IO.FileMode]::Open,
+      [IO.FileAccess]::Read)
+    $formField = New-Object Net.Http.StreamContent($fs)
+    $form.Add($formField, "file", "$env:APPVEYOR_PROJECT_NAME.zip")
+    # Fill version field.
+    $version = "$env:VersionMajor.$env:VersionMinor.$env:VersionPatch" +
+      "-$env:VersionStage+$env:VersionBuild"
+    $formField = New-Object Net.Http.StringContent($version)
+    $form.Add($formField, "version")
+    # Fill description field.
+    $formField =
+      New-Object Net.Http.StringContent("Scheduled CI server build.")
+    $form.Add($formField, "description")
+    # Submit form.
+    $url = "https://scan.coverity.com/builds?project=$env:APPVEYOR_REPO_NAME"
+    $task = $client.PostAsync($url, $form)
+    try {
+      $task.Wait()  # throws AggregateException on time-out
+    } catch [AggregateException] {
+      throw $_.Exception.InnerException
+    }
+    $task.Result
+    $fs.Close()
+    
 # scripts to run before build
-before_build:
-- cmd: nuget restore ICSharpCode.SharpZipLib.sln
+#before_build:
+#- cmd: nuget restore ICSharpCode.SharpZipLib.sln
 
 #---------------------------------#
 #       tests configuration       #
@@ -88,10 +186,6 @@ artifacts:
   name: Debug
 - path: bin\Debug\ICSharpCode.SharpZipLib.pdb
   name: Debug
-- path: bin\Release\ICSharpCode.SharpZipLib.dll
-  name: Release
-- path: bin\Release\ICSharpCode.SharpZipLib.pdb
-  name: Release
 
 #---------------------------------#
 #     deployment configuration    #
