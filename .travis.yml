@@ -1,13 +1,19 @@
 language: csharp
 mono:
   - latest
-  - 3.12.0
-  - 2.10.8
-solution: ICSharpCode.SharpZipLib.sln
-#install:
-#  - nuget restore ICSharpCode.SharpZipLib.sln
-#  - nuget install NUnit.Runners -Version 2.6.4 -OutputDirectory testrunner
-script:
-  - xbuild /p:Configuration=Debug ICSharpCode.SharpZipLib.sln
-  - xbuild /p:Configuration=Release ICSharpCode.SharpZipLib.sln
-#  - mono ./testrunner/NUnit.Runners.2.6.4/tools/nunit-console.exe ./ICSharpCode.SharpZipLib.Tests/bin/Release/ICSharpCode.SharpZipLib.Tests.dll
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "IqdU9qV0JGGk0Fzpkw7MjEJ0ZB0TMjh0+7DpZGJuaDzTCI01+jTzGgn3L/xciNXCtVlsIgFsBMsvl6o2k4d4E/GBnf5wlofy3a8iGu30A7ecBJrrUCtcTRKHa7jTPAzQMosCzZhb5RwNtf0j3mP6WwwRaa4eg7aJ4J0LqPZJ6ejM/ooC6BA645Vtc/+HWfkAeUbKBfDAWpSBm2Y9kHYfOoXQrEyOmcTFJPMQ2+VPw+kKkupn/hG+1LfwivvBioBTx1yISNj7AHFM1zNDNYXaZspWUKhObPvHabT9fcS/6G13tYdCopwuZuHFBC0KFG4RH9TFVZV3LWxY/3BNRvrkH5NXfOIRxCeAE0mnTD5VYU9HGWKJRb8vkAhMd7nREgeEUBXs9memnykIVrX7a0bhm9V7wui/rMAWI9mF92vsIGy12qrGN3PoHkGfpqy/MDakGQNLRoWUeY4FiKrSonkS0CwLbtZfGeBp7KeM/1y9b9IErpxd7gHDjVg6xCbWcZIZxvxkQqeDDZ1uPHo5wJfpNn2RCF4FxauMYVUCe8vQjL2F8HJM1LGu7+VMm1XRw+1T6jMQ635LakKX+wwXLvbsCV2VDExU1k6KWXWk7ET3c+t0QFAjd4W0c5pr/tiewP/n2FBVgC4VsxwY0xIaWjg6TamPK7H/fpq5LaOJQUV1Myo="
+
+addons:
+  coverity_scan:
+    project:
+      name: "McNeight/SharpZipLib"
+      description: "Build submitted via Travis CI"
+    notification_email: mcneight+github@gmail.com
+    build_command_prepend: "msbuild /t:Clean"
+    build_command:   "msbuild /t:Rebuild"
+    branch_pattern: coverity_scan
