@@ -13,7 +13,7 @@ addons:
     project:
       name: "McNeight/SharpZipLib"
       description: "Build submitted via Travis CI"
-    notification_email: mcneight+github@gmail.com
-    build_command_prepend: "msbuild /t:Clean"
-    build_command:   "msbuild /t:Rebuild"
+    notification_email: mcneight+coverity@gmail.com
+    #build_command_prepend: "xbuild /t:Clean"
+    build_command:   "xbuild /p:Configuration=Debug ICSharpCode.SharpZipLib.sln"
     branch_pattern: coverity_scan
